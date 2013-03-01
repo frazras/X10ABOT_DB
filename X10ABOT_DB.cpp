@@ -132,7 +132,7 @@ int X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte p
       //Initialise input port
     case OP_IO_INP:
     //case 2:
-       pinMode(output[instr.port].io_pin[instr.pin], INPUT);
+      pinMode(output[instr.port].io_pin[instr.pin], INPUT);
       return digitalRead(output[instr.port].io_pin[instr.pin]);
       break;
     }
@@ -140,19 +140,9 @@ int X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte p
     break;
 
   case FN_PWM:
-
-    switch( instr.op )
-    {
-        case OP_PWM_A:
-          analogWrite(output[instr.port].pwm_pin[instr.pin], instr.data);
-          Serial.print("PWMA"); Serial.print(" = "); Serial.print(output[instr.port].pwm_pin[instr.pin]); Serial.print(" =data = "); Serial.println(instr.data);
-          break;
-
-       case OP_PWM_B:
-          analogWrite(output[instr.port].pwm_pin[instr.pin], instr.data);
-          Serial.println("PWMB");
-          break;
-    }
+      analogWrite(output[instr.port].pwm_pin[instr.pin], instr.data);
+      Serial.print("PWM"); Serial.print(" = "); Serial.print(output[instr.port].pwm_pin[instr.pin]); Serial.print(" data = "); Serial.println(instr.data);
+      break;
 
   case FN_SERIAL:
     Serial.println("SERIAL");
