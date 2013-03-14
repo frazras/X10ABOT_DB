@@ -14,18 +14,18 @@
 
 
 //Functions
-static const byte FN_IO = 1;
-static const byte FN_PWM  = 2;
-static const byte FN_SERIAL = 3;
+static const byte DB_FN_IO = 1;
+static const byte DB_FN_PWM  = 2;
+static const byte DB_FN_SERIAL = 3;
 
 //IO Operands
-static const byte OP_IO_HI = 2;
-static const byte OP_IO_LOW = 1;
-static const byte OP_IO_INP = 0;
+static const byte DB_OP_IO_HI = 2;
+static const byte DB_OP_IO_LOW = 1;
+static const byte DB_OP_IO_INP = 0;
 
 //PWM Operands
-static const byte OP_PWM_A = 0;
-static const byte OP_PWM_B = 1;
+//static const byte OP_PWM_A = 0;
+//static const byte OP_PWM_B = 1;
 
 //port to pin assignment
 
@@ -58,6 +58,7 @@ class X10ABOT_DB {
     ~X10ABOT_DB();
 
     void receiveEvent(int numBytes);
+    void localEvent(byte * message, int numBytes);
     static void receiveEvent_wrapper(int numBytes);
     int execParse(MicroCode instr);
     /**

@@ -65,17 +65,16 @@ void X10ABOT_DB::receiveEvent_wrapper (int numBytes){
        mySelf->receiveEvent(numBytes);
    }
 
-
-byte start_flag = 0;
 /**
 * Implementation of the Wire/I2C recieve event
 **/
 
-void X10ABOT_DB::receiveEvent(int numBytes){
+void X10ABOT_DB::receiveEvent(int numBytes)
+{
   byte fn_op, db, port;
+  while(0 < Wire.available()) // loop through all but the last
+  {
 
-  if(1 < Wire.available() || start_flag==1){
-    //Serial.println(c,BIN);
     fn_op = Wire.read(); // receive FUNCTION & OPERATOR byte
     instr.db = Wire.read(); // receive Daughter Board's # byte
     port = Wire.read(); // receive Daughter Board's Port # byte
@@ -92,16 +91,63 @@ void X10ABOT_DB::receiveEvent(int numBytes){
     //Serial.print("instr.op: ");Serial.println(instr.op, BIN);
     //Serial.print("instr.db: ");Serial.println(instr.db, BIN);
     //Serial.print("instr.pt: ");Serial.println(instr.port, BIN);
-    Serial.print("instr.pn: ");Serial.println(instr.pin, BIN);
-    execParse(instr);
-    while(0 < Wire.available()){ // loop through all but the last
-      Serial.println("DATA");
-      instr.data = Wire.read(); // receive byte as a character
-      Serial.println(instr.data, BIN);
-      execParse(instr);      //Calls the function delegator
-      start_flag=2;
-    }
+    //Serial.print("instr.pn: ");Serial.println(instr.pin, BIN);
 
+    if (0<Wire.available())
+    {
+      while(0 < Wire.available()){ // loop through all but the last
+        //Serial.println("DATA");
+        instr.data = Wire.read(); // receive byte as a character
+        //Serial.print("instr.data: ");Serial.println(instr.data, BIN);
+        execParse(instr);      //Calls the function delegator
+      }
+    }
+    else{
+      execParse(instr);
+    }
+  }
+}
+
+void X10ABOT_DB::localEvent(byte * message, int numBytes)
+{
+  byte fn_op, db, port;
+  if (numBytes>=3) // loop through all but the last
+  {
+
+    fn_op = message[0]; // receive FUNCTION & OPERATOR byte
+    instr.db = message[1]; // receive Daughter Board's # byte
+    port = message[2]; // receive Daughter Board's Port # byte
+
+    byte op_mask = 0b00001111; // operator bitmask
+    byte pin_mask =0b00000001;  //pin bitmask
+
+    instr.fn   = fn_op  >> 4;
+    instr.port = port >> 1;
+    instr.op   = (fn_op & op_mask);
+    instr.pin  = (port & pin_mask);
+    numBytes = numBytes - 3;
+
+    //Serial.print("instr.fn: ");Serial.println(instr.fn, BIN);
+    //Serial.print("instr.op: ");Serial.println(instr.op, BIN);
+    //Serial.print("instr.db: ");Serial.println(instr.db, BIN);
+    //Serial.print("instr.pt: ");Serial.println(instr.port, BIN);
+    //Serial.print("instr.pn: ");Serial.println(instr.pin, BIN);
+
+    if (numBytes>0)
+    {
+      byte x = 3;
+      while(0 < numBytes){ // loop through all but the last
+        //Serial.println("DATA");
+        instr.data = message[x]; // receive byte as a character
+        //Serial.print("instr.data: ");Serial.println(instr.data, BIN);
+        execParse(instr);      //Calls the function delegator
+        x++;
+        numBytes--;
+      }
+    }
+    else{
+      execParse(instr);
+    }
   }
 }
 
@@ -109,28 +155,28 @@ int X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte p
   int val;
   switch( instr.fn )
   {
-    case FN_IO:
-    Serial.println("IO");
+    case DB_FN_IO:
+    //Serial.println("IO");
 
     switch( instr.op )
     {
       //Initialise output port
-      case OP_IO_HI:
+      case DB_OP_IO_HI:
       pinMode(output[instr.port].io_pin[instr.pin], OUTPUT);
-      Serial.print("PORT ");Serial.print(instr.port, DEC);Serial.print(" LED ");Serial.print(instr.op, DEC);Serial.print(" ON ");Serial.println(instr.pin, DEC);
+      //Serial.print("PORT ");Serial.print(instr.port, DEC);Serial.print(" LED ");Serial.print(instr.op, DEC);Serial.print(" ON ");Serial.println(instr.pin, DEC);
       digitalWrite(output[instr.port].io_pin[instr.pin], HIGH);
       break;
 
 
-    case OP_IO_LOW:
+    case DB_OP_IO_LOW:
       pinMode(output[instr.port].io_pin[instr.pin], OUTPUT);
-      Serial.print("PORT ");Serial.print(instr.port, DEC);Serial.print(" LED ");Serial.print(instr.pin, DEC);Serial.println(" OFF");
+      //Serial.print("PORT ");Serial.print(instr.port, DEC);Serial.print(" LED ");Serial.print(instr.pin, DEC);Serial.println(" OFF");
       digitalWrite(output[instr.port].io_pin[instr.pin], LOW);
       break;
 
 
       //Initialise input port
-    case OP_IO_INP:
+    case DB_OP_IO_INP:
     //case 2:
       pinMode(output[instr.port].io_pin[instr.pin], INPUT);
       return digitalRead(output[instr.port].io_pin[instr.pin]);
@@ -139,19 +185,20 @@ int X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte p
 
     break;
 
-  case FN_PWM:
+  case DB_FN_PWM:
       analogWrite(output[instr.port].pwm_pin[instr.pin], instr.data);
-      Serial.print("PWM"); Serial.print(" = "); Serial.print(output[instr.port].pwm_pin[instr.pin]); Serial.print(" data = "); Serial.println(instr.data);
+      //Serial.print("PORT ");Serial.print(instr.port, DEC);
+      //Serial.print(" PWM("); Serial.print(instr.pin); Serial.print(") DATA="); Serial.println(instr.data);
       break;
 
-  case FN_SERIAL:
-    Serial.println("SERIAL");
+  case DB_FN_SERIAL:
+    //Serial.println("SERIAL");
     break;
 
   default:
     Serial.println("NONE");
   }
-  Serial.println("DONE");
+  //Serial.println("DONE");
   //delay(5000);
   return val;
 }
