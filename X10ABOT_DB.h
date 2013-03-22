@@ -16,9 +16,12 @@
 //Functions
 static const byte DB_FN_IO = 1;
 static const byte DB_FN_PWM  = 2;
-static const byte DB_FN_SERIAL = 3;
+static const byte DB_FN_ANALOG = 3 << 4;
+static const byte DB_FN_SERIAL = 4 << 4;
 
 //IO Operands
+static const byte DB_OP_IO_PI_LOW = 4;  //pulse in falling edge
+static const byte DB_OP_IO_PI_HI = 3;  //pulse in rising edge
 static const byte DB_OP_IO_HI = 2;
 static const byte DB_OP_IO_LOW = 1;
 static const byte DB_OP_IO_INP = 0;
@@ -26,6 +29,11 @@ static const byte DB_OP_IO_INP = 0;
 //PWM Operands
 //static const byte OP_PWM_A = 0;
 //static const byte OP_PWM_B = 1;
+
+//Microcode Array
+static const byte DB_D_B_SELECTION = 1;
+static const byte DB_FUNCTION_OPERAND =0;
+static const byte DB_PORT_PIN = 2;
 
 //port to pin assignment
 
@@ -60,14 +68,14 @@ class X10ABOT_DB {
     void receiveEvent(int numBytes);
     void localEvent(byte * message, int numBytes);
     static void receiveEvent_wrapper(int numBytes);
-    int execParse(MicroCode instr);
+    void execParse(MicroCode instr);
     /**
     * Logging Functions
     **/
     void i2cStatusLog(byte var);
 
   private:
-    int _logging;
+    int _logging, _analog;
 
 };
 

@@ -36,6 +36,7 @@ X10ABOT_DB::X10ABOT_DB(byte db_address, byte logging){
   Wire.begin(db_address);                // join i2c bus with address #4
  //Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent_wrapper); // register event
+  Wire.onRequest(requestEvent_wrapper);
 }
 
 X10ABOT_DB::X10ABOT_DB(byte logging){
@@ -64,6 +65,28 @@ void X10ABOT_DB::receiveEvent_wrapper (int numBytes){
        // call member
        mySelf->receiveEvent(numBytes);
    }
+
+
+/**
+* Static wrapper method for the recieve event;
+**/
+void X10ABOT_DB::requestEvent_wrapper(){
+       // explicitly cast to a pointer to TClassA
+       X10ABOT_DB* mySelf = (X10ABOT_DB*) pt2Object;
+
+       // call member
+       mySelf->requestEvent();
+   }
+
+
+/**
+* Implementation of the Wire/I2C recieve event
+**/
+
+void X10ABOT_DB::requestEvent()
+{
+
+}
 
 /**
 * Implementation of the Wire/I2C recieve event
@@ -108,15 +131,15 @@ void X10ABOT_DB::receiveEvent(int numBytes)
   }
 }
 
-void X10ABOT_DB::localEvent(byte * message, int numBytes)
+void X10ABOT_DB::localEvent(byte * microcode, int numBytes)
 {
   byte fn_op, db, port;
   if (numBytes>=3) // loop through all but the last
   {
 
-    fn_op = message[0]; // receive FUNCTION & OPERATOR byte
-    instr.db = message[1]; // receive Daughter Board's # byte
-    port = message[2]; // receive Daughter Board's Port # byte
+    fn_op = microcode[DB_FUNCTION_OPERAND]; // receive FUNCTION & OPERAND byte
+    instr.db = microcode[DB_D_B_SELECTION]; // receive Daughter Board's # byte
+    port = microcode[DB_PORT_PIN]; // receive Daughter Board's Port # byte
 
     byte op_mask = 0b00001111; // operator bitmask
     byte pin_mask =0b00000001;  //pin bitmask
@@ -138,7 +161,7 @@ void X10ABOT_DB::localEvent(byte * message, int numBytes)
       byte x = 3;
       while(0 < numBytes){ // loop through all but the last
         //Serial.println("DATA");
-        instr.data = message[x]; // receive byte as a character
+        instr.data = microcode[x]; // receive byte as a character
         //Serial.print("instr.data: ");Serial.println(instr.data, BIN);
         execParse(instr);      //Calls the function delegator
         x++;
@@ -151,7 +174,7 @@ void X10ABOT_DB::localEvent(byte * message, int numBytes)
   }
 }
 
-int X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte port, byte data)
+void X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte port, byte data)
   int val;
   switch( instr.fn )
   {
@@ -185,20 +208,26 @@ int X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte p
 
     break;
 
-  case DB_FN_PWM:
+    case DB_FN_PWM:{
       analogWrite(output[instr.port].pwm_pin[instr.pin], instr.data);
       //Serial.print("PORT ");Serial.print(instr.port, DEC);
       //Serial.print(" PWM("); Serial.print(instr.pin); Serial.print(") DATA="); Serial.println(instr.data);
       break;
+    }
 
-  case DB_FN_SERIAL:
+    case DB_FN_SERIAL:{
     //Serial.println("SERIAL");
-    break;
+      break;
+    }
 
-  default:
+    case DB_FN_ANALOG:{
+      _analog = analogRead(analogPin);
+      break;
+    }
+    default:
     Serial.println("NONE");
   }
   //Serial.println("DONE");
   //delay(5000);
-  return val;
+  //return val;
 }
