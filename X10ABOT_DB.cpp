@@ -6,7 +6,6 @@
 #include <Wire.h>
 #include "X10ABOT_DB.h" //include the declaration for this class
 
-
 void* pt2Object;
 
 //Used as the most fundamental level of coding
@@ -30,6 +29,7 @@ INPUT_PORT input[] = {
 //available IO: {0,1} =>[rx,tx])
 //available PWM {3,5}
 
+
 //<<constructor>>
 X10ABOT_DB::X10ABOT_DB(byte db_address, byte logging){
   _logging = logging;
@@ -37,6 +37,7 @@ X10ABOT_DB::X10ABOT_DB(byte db_address, byte logging){
  //Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent_wrapper); // register event
   Wire.onRequest(requestEvent_wrapper);
+  _rand_mid = random(0, 20);
 }
 
 X10ABOT_DB::X10ABOT_DB(byte logging){
@@ -52,7 +53,8 @@ Byte 1:XXXX1111 OPERAND BYTE
 Byte 2:11111111 D.B. SELECTION
 Byte 3:1111111X PORT SELECTION
 Byte 3:XXXXXXX1 PIN SELECTION
-Byte 3+n 11111111 DATA BYTES; n> 0*/
+Byte 4:11111111 INSTRUCTION SEQUENCE NUMBER
+Byte 4+n 11111111 DATA BYTES; n> 0*/
 
 
 /**
@@ -83,11 +85,19 @@ void X10ABOT_DB::requestEvent_wrapper(){
 * Implementation of the Wire/I2C recieve event
 **/
 
-void X10ABOT_DB::requestEvent()
-{
-
+void X10ABOT_DB::requestEvent(){
+      for (int j = 0; j <= 1; j++){
+        Wire.write(_lookup[j]);
+      }
 }
-
+void X10ABOT_DB::localRequest(byte * return_array){
+  //Serial.print("_lookup0: ");Serial.println(_lookup[0]);
+  //Serial.print("_lookup1: ");Serial.println(_lookup[1]);
+  for (int j = 0; j <= 1; j++){
+    //Serial.print("_lookupj: ");Serial.println(_lookup[j]);
+    return_array[j] = _lookup[j];
+  }
+}
 /**
 * Implementation of the Wire/I2C recieve event
 **/
@@ -101,6 +111,7 @@ void X10ABOT_DB::receiveEvent(int numBytes)
     fn_op = Wire.read(); // receive FUNCTION & OPERATOR byte
     instr.db = Wire.read(); // receive Daughter Board's # byte
     port = Wire.read(); // receive Daughter Board's Port # byte
+    instr.seq = Wire.read();//receive instruction sequence number
 
     byte op_mask = 0b00001111; // operator bitmask
     byte pin_mask =0b00000001;  //pin bitmask
@@ -131,15 +142,16 @@ void X10ABOT_DB::receiveEvent(int numBytes)
   }
 }
 
-void X10ABOT_DB::localEvent(byte * microcode, int numBytes)
+void X10ABOT_DB::localReceive(byte * microcode, int numBytes)
 {
   byte fn_op, db, port;
-  if (numBytes>=3) // loop through all but the last
+  if (numBytes>=DB_INSTR_HEADER_SIZE) // loop through all but the last
   {
 
     fn_op = microcode[DB_FUNCTION_OPERAND]; // receive FUNCTION & OPERAND byte
     instr.db = microcode[DB_D_B_SELECTION]; // receive Daughter Board's # byte
     port = microcode[DB_PORT_PIN]; // receive Daughter Board's Port # byte
+    instr.seq = microcode[DB_SEQ_NUM];//receive instruction sequence number
 
     byte op_mask = 0b00001111; // operator bitmask
     byte pin_mask =0b00000001;  //pin bitmask
@@ -148,17 +160,19 @@ void X10ABOT_DB::localEvent(byte * microcode, int numBytes)
     instr.port = port >> 1;
     instr.op   = (fn_op & op_mask);
     instr.pin  = (port & pin_mask);
-    numBytes = numBytes - 3;
+    numBytes = numBytes - DB_INSTR_HEADER_SIZE;
+
 
     //Serial.print("instr.fn: ");Serial.println(instr.fn, BIN);
     //Serial.print("instr.op: ");Serial.println(instr.op, BIN);
     //Serial.print("instr.db: ");Serial.println(instr.db, BIN);
     //Serial.print("instr.pt: ");Serial.println(instr.port, BIN);
     //Serial.print("instr.pn: ");Serial.println(instr.pin, BIN);
+    //Serial.print("instr.seq: ");Serial.println(instr.seq);
 
-    if (numBytes>0)
+    if (numBytes>DB_INSTR_HEADER_SIZE)
     {
-      byte x = 3;
+      byte x = DB_INSTR_HEADER_SIZE;
       while(0 < numBytes){ // loop through all but the last
         //Serial.println("DATA");
         instr.data = microcode[x]; // receive byte as a character
@@ -178,35 +192,37 @@ void X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte 
   int val;
   switch( instr.fn )
   {
-    case DB_FN_IO:
+    case DB_FN_IO:{
     //Serial.println("IO");
 
-    switch( instr.op )
-    {
+      switch( instr.op )
+      {
       //Initialise output port
-      case DB_OP_IO_HI:
-      pinMode(output[instr.port].io_pin[instr.pin], OUTPUT);
+        case DB_OP_IO_HI:{
+          pinMode(output[instr.port].io_pin[instr.pin], OUTPUT);
       //Serial.print("PORT ");Serial.print(instr.port, DEC);Serial.print(" LED ");Serial.print(instr.op, DEC);Serial.print(" ON ");Serial.println(instr.pin, DEC);
-      digitalWrite(output[instr.port].io_pin[instr.pin], HIGH);
-      break;
+          digitalWrite(output[instr.port].io_pin[instr.pin], HIGH);
+          break;
+        }
 
-
-    case DB_OP_IO_LOW:
-      pinMode(output[instr.port].io_pin[instr.pin], OUTPUT);
+        case DB_OP_IO_LOW:{
+          pinMode(output[instr.port].io_pin[instr.pin], OUTPUT);
       //Serial.print("PORT ");Serial.print(instr.port, DEC);Serial.print(" LED ");Serial.print(instr.pin, DEC);Serial.println(" OFF");
-      digitalWrite(output[instr.port].io_pin[instr.pin], LOW);
-      break;
-
+          digitalWrite(output[instr.port].io_pin[instr.pin], LOW);
+          break;
+        }
 
       //Initialise input port
-    case DB_OP_IO_INP:
+        case DB_OP_IO_INP:{
     //case 2:
-      pinMode(output[instr.port].io_pin[instr.pin], INPUT);
-      return digitalRead(output[instr.port].io_pin[instr.pin]);
+          pinMode(output[instr.port].io_pin[instr.pin], INPUT);
+          _digital = digitalRead(output[instr.port].io_pin[instr.pin]);
+          break;
+        }
+      }
+
       break;
     }
-
-    break;
 
     case DB_FN_PWM:{
       analogWrite(output[instr.port].pwm_pin[instr.pin], instr.data);
@@ -216,18 +232,15 @@ void X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte 
     }
 
     case DB_FN_SERIAL:{
-    //Serial.println("SERIAL");
       break;
     }
 
     case DB_FN_ANALOG:{
-      _analog = analogRead(analogPin);
+      _lookup[0] = instr.seq;
+      _lookup[1] = analogRead(input[instr.port].analog);
       break;
     }
     default:
-    Serial.println("NONE");
+    Serial.print("NONE: ");
   }
-  //Serial.println("DONE");
-  //delay(5000);
-  //return val;
 }

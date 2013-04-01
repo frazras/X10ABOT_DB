@@ -16,8 +16,8 @@
 //Functions
 static const byte DB_FN_IO = 1;
 static const byte DB_FN_PWM  = 2;
-static const byte DB_FN_ANALOG = 3 << 4;
-static const byte DB_FN_SERIAL = 4 << 4;
+static const byte DB_FN_ANALOG = 3;
+static const byte DB_FN_SERIAL = 4;
 
 //IO Operands
 static const byte DB_OP_IO_PI_LOW = 4;  //pulse in falling edge
@@ -31,9 +31,11 @@ static const byte DB_OP_IO_INP = 0;
 //static const byte OP_PWM_B = 1;
 
 //Microcode Array
+static const byte DB_FUNCTION_OPERAND = 0;
 static const byte DB_D_B_SELECTION = 1;
-static const byte DB_FUNCTION_OPERAND =0;
 static const byte DB_PORT_PIN = 2;
+static const byte DB_SEQ_NUM = 3;
+static const byte DB_INSTR_HEADER_SIZE = 4;
 
 //port to pin assignment
 
@@ -52,6 +54,7 @@ typedef struct {
       byte op;   //operand
       byte port; //port #
       byte db; //daughterboard address
+      byte seq; //instruction sequence number
       byte data; //databyte(s)
       byte pin; //pin selector
     }MicroCode;
@@ -66,8 +69,11 @@ class X10ABOT_DB {
     ~X10ABOT_DB();
 
     void receiveEvent(int numBytes);
-    void localEvent(byte * message, int numBytes);
+    void requestEvent();
+    void localRequest(byte * return_array);
+    void localReceive(byte * message, int numBytes);
     static void receiveEvent_wrapper(int numBytes);
+    static void requestEvent_wrapper();
     void execParse(MicroCode instr);
     /**
     * Logging Functions
@@ -75,7 +81,11 @@ class X10ABOT_DB {
     void i2cStatusLog(byte var);
 
   private:
-    int _logging, _analog;
+    int _logging, _analog, _digital;
+    byte _rand_mid;
+    byte _lookup[2];
+
+
 
 };
 
