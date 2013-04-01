@@ -86,10 +86,9 @@ void X10ABOT_DB::requestEvent_wrapper(){
 **/
 
 void X10ABOT_DB::requestEvent(){
-      for (int j = 0; j <= 1; j++){
-        Wire.write(_lookup[j]);
-      }
+        Wire.write(_lookup, 2);
 }
+
 void X10ABOT_DB::localRequest(byte * return_array){
   //Serial.print("_lookup0: ");Serial.println(_lookup[0]);
   //Serial.print("_lookup1: ");Serial.println(_lookup[1]);
