@@ -83,7 +83,7 @@ class X10ABOT_DB {
   private:
     int _logging, _analog, _digital;
     byte _rand_mid;
-    byte _lookup[2];
+    byte _lookup[6];
 
 
 

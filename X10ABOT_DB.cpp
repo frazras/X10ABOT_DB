@@ -86,13 +86,13 @@ void X10ABOT_DB::requestEvent_wrapper(){
 **/
 
 void X10ABOT_DB::requestEvent(){
-        Wire.write(_lookup, 2);
+        Wire.write(_lookup, 7);
 }
 
 void X10ABOT_DB::localRequest(byte * return_array){
   //Serial.print("_lookup0: ");Serial.println(_lookup[0]);
   //Serial.print("_lookup1: ");Serial.println(_lookup[1]);
-  for (int j = 0; j <= 1; j++){
+  for (int j = 0; j <= 5; j++){
     //Serial.print("_lookupj: ");Serial.println(_lookup[j]);
     return_array[j] = _lookup[j];
   }
@@ -214,8 +214,11 @@ void X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte 
       //Initialise input port
         case DB_OP_IO_INP:{
     //case 2:
-          pinMode(output[instr.port].io_pin[instr.pin], INPUT);
-          _digital = digitalRead(output[instr.port].io_pin[instr.pin]);
+          //Serial.println(input[instr.port].io_pin[instr.pin]);
+          pinMode(input[instr.port].io_pin[instr.pin], INPUT);
+          _lookup[0] = instr.seq;
+          _lookup[1] = digitalRead(input[instr.port].io_pin[instr.pin]);
+
           break;
         }
       }
@@ -235,8 +238,20 @@ void X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte 
     }
 
     case DB_FN_ANALOG:{
+      int SensorData = analogRead(input[instr.port].analog);
+
+      itoa(SensorData,(char*)_lookup,10);
+
+      byte z = sizeof(_lookup);
+      for(int j = z - 2; j >= 0; j--) {
+        _lookup[j+1] =  _lookup[j];
+      }
       _lookup[0] = instr.seq;
-      _lookup[1] = analogRead(input[instr.port].analog);
+      //Serial.write(_lookup, z);
+      /*for(int x=0; x<=z; x++){
+        Serial.print("_lookup[]): ");  Serial.println(_lookup[x]);
+        Serial.println("");
+      }*/
       break;
     }
     default:
