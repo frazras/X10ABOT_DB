@@ -216,8 +216,15 @@ void X10ABOT_DB::execParse(MicroCode instr){  //byte fn, byte op, byte db, byte 
     //case 2:
           //Serial.println(input[instr.port].io_pin[instr.pin]);
           pinMode(input[instr.port].io_pin[instr.pin], INPUT);
+
+          int SensorData = digitalRead(input[instr.port].io_pin[instr.pin]);
+          itoa(SensorData,(char*)_lookup,10);
+
+          byte z = sizeof(_lookup);
+          for(int j = z - 2; j >= 0; j--) {
+            _lookup[j+1] =  _lookup[j];
+          }
           _lookup[0] = instr.seq;
-          _lookup[1] = digitalRead(input[instr.port].io_pin[instr.pin]);
 
           break;
         }
